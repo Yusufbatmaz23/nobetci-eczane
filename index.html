@@ -2,33 +2,38 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nöbetçi Eczane Bulucu</title>
-  <!-- Ücretsiz OpenStreetMap (Leaflet) Kütüphanesi -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Yakınımdaki Nöbetçi Eczaneler</title>
+  <meta name="theme-color" content="#0b132b">
+  
+  <!-- Harita Kütüphanesi (OpenStreetMap / Leaflet) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #0b132b; color: #f8fafc; padding: 12px; max-width: 500px; margin: 0 auto; }
-    header { text-align: center; margin-bottom: 12px; }
+    body { background-color: #0b132b; color: #f8fafc; padding: 14px; max-width: 500px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 14px; }
     header h1 { font-size: 20px; color: #ef4444; }
-    header p { font-size: 12px; color: #94a3b8; }
+    header p { font-size: 12px; color: #94a3b8; margin-top: 3px; }
     
-    #map { height: 260px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #1e293b; z-index: 1; }
+    #map { height: 260px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #3a506b; z-index: 1; }
     
-    .status-box { background-color: #1c2541; border-radius: 10px; padding: 12px; text-align: center; margin-bottom: 14px; border: 1px solid #3a506b; }
-    .btn-find { background-color: #ef4444; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+    .btn-find { background-color: #ef4444; color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); }
     .btn-find:hover { background-color: #dc2626; }
+    .btn-find:disabled { background-color: #64748b; cursor: not-allowed; }
     
-    .pharmacy-card { background-color: #1c2541; border-radius: 12px; padding: 14px; margin-bottom: 10px; border: 1px solid #3a506b; position: relative; }
+    #durum { text-align: center; margin: 12px 0; font-size: 13px; color: #cbd5e1; }
+    
+    .pharmacy-card { background-color: #1c2541; border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid #3a506b; position: relative; }
     .badge { position: absolute; top: 12px; right: 12px; background-color: #10b981; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
-    .pharmacy-name { font-size: 16px; font-weight: bold; margin-bottom: 3px; }
-    .pharmacy-district { font-size: 12px; color: #94a3b8; margin-bottom: 6px; }
+    .pharmacy-name { font-size: 17px; font-weight: bold; margin-bottom: 3px; }
+    .pharmacy-district { font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+    .pharmacy-address { font-size: 12px; color: #cbd5e1; margin-bottom: 8px; line-height: 1.4; }
     .pharmacy-dist { font-size: 18px; font-weight: 800; color: #38bdf8; margin-bottom: 10px; }
     
     .card-actions { display: flex; gap: 8px; }
-    .card-actions a { flex: 1; text-align: center; padding: 9px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; }
+    .card-actions a { flex: 1; text-align: center; padding: 10px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: bold; }
     .btn-call { background-color: #334155; color: white; }
     .btn-nav { background-color: #2563eb; color: white; }
   </style>
@@ -36,124 +41,116 @@
 <body>
 
   <header>
-    <h1>🚨 En Yakın Nöbetçi Eczane</h1>
-    <p>İlçe sınırı olmadan, gerçekten en yakın açık eczane.</p>
+    <h1>🚨 Yakınımdaki Nöbetçi Eczane</h1>
+    <p>İlçe sınırı yok. Gerçekten en yakın açık eczaneler.</p>
   </header>
 
-  <div class="status-box">
-    <button class="btn-find" onclick="konumumuBul()">📍 En Yakın Eczaneleri Bul</button>
-    <p id="durum" style="margin-top: 8px; font-size: 12px; color: #cbd5e1;">Konum izni vererek başlayın</p>
-  </div>
+  <button id="findBtn" class="btn-find" onclick="canliEczaneleriGetir()">📍 En Yakın Nöbetçi Eczaneleri Bul</button>
+  <p id="durum">Konum butonuna basarak arama yapın</p>
 
-  <!-- Harita Alanı -->
   <div id="map"></div>
-
-  <!-- Liste Alanı -->
   <div id="liste"></div>
 
   <script>
-    // İlçe sınırlarını aşan örnek eczaneler (Gaziosmanpaşa, Gazi Mah., Sultangazi, Alibeyköy)
-    const ornekEczaneler = [
-      { ad: "Gazi Hayat Eczanesi", ilce: "Sultangazi (Gazi Mah.)", tel: "02120000001", lat: 41.0995, lon: 28.8970 },
-      { ad: "Yıldıztabya Şifa Eczanesi", ilce: "Gaziosmanpaşa (Yıldıztabya)", tel: "02120000002", lat: 41.0540, lon: 28.9180 },
-      { ad: "Meydan Merkez Eczanesi", ilce: "Gaziosmanpaşa (Meydan)", tel: "02120000003", lat: 41.0632, lon: 28.9145 },
-      { ad: "Karayolları Eczanesi", ilce: "Gaziosmanpaşa (Karayolları)", tel: "02120000004", lat: 41.0890, lon: 28.8995 },
-      { ad: "Alibeyköy Park Eczanesi", ilce: "Eyüpsultan (Alibeyköy)", tel: "02120000005", lat: 41.0715, lon: 28.9480 }
-    ];
+    // Senin ekrandaki NosyAPI anahtarın
+    const API_KEY = "8FbmiAoytZC2IaVRWgYCHPe71xwBe3wgA6eNYFeEDMBUeBNnwxZE4zQ0Geu";
 
     let map = null;
     let markersLayer = null;
 
-    // Haritayı başlat (Varsayılan İstanbul)
+    window.onload = function() {
+      haritayiBaslat();
+    };
+
     function haritayiBaslat(lat = 41.0700, lon = 28.9200) {
       if (!map) {
         map = L.map('map').setView([lat, lon], 13);
-        // %100 Ücretsiz OpenStreetMap Harita Katmanı
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap'
         }).addTo(map);
         markersLayer = L.layerGroup().addTo(map);
       } else {
-        map.setView([lat, lon], 14);
+        map.setView([lat, lon], 13);
       }
     }
 
-    haritayiBaslat();
-
-    // Haversine Mesafe Formülü
-    function mesafeHesapla(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    }
-
-    function konumumuBul() {
+    function canliEczaneleriGetir() {
       const durumEl = document.getElementById("durum");
-      durumEl.innerText = "GPS koordinatınız aranıyor...";
+      const btn = document.getElementById("findBtn");
 
-      if (!navigator.geolocation) {
-        durumEl.innerText = "Cihazınız konum özelliğini desteklemiyor.";
-        return;
-      }
+      durumEl.innerText = "GPS uydusuna bağlanılıyor...";
+      btn.disabled = true;
 
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        async (pos) => {
           const userLat = pos.coords.latitude;
           const userLon = pos.coords.longitude;
-          durumEl.innerText = "En yakın eczaneler listelendi!";
+          durumEl.innerText = "Konum alındı! Canlı nöbetçi eczaneler taranıyor...";
 
           haritayiBaslat(userLat, userLon);
           markersLayer.clearLayers();
 
-          // Kullanıcının bulunduğu noktaya mavi daire koy
+          // Kullanıcı konumu (Mavi Halka)
           L.circleMarker([userLat, userLon], { radius: 8, color: '#38bdf8', fillColor: '#0284c7', fillOpacity: 1 })
             .bindPopup("<b>Buradasınız</b>").addTo(markersLayer);
 
-          // Mesafeleri hesapla ve sırala
-          const sirali = ornekEczaneler.map(e => ({
-            ...e,
-            mesafe: mesafeHesapla(userLat, userLon, e.lat, e.lon)
-          })).sort((a, b) => a.mesafe - b.mesafe);
+          try {
+            // Canlı NosyAPI Locations Servisi
+            const url = `https://www.nosyapi.com/apiv2/service/pharmacies-on-duty/locations?latitude=${userLat}&longitude=${userLon}&apiKey=${API_KEY}`;
+            const res = await fetch(url);
+            const json = await res.json();
 
-          // Eczaneleri haritaya kırmızı işaretçi olarak koy
-          sirali.forEach((e, idx) => {
-            const popupText = `<b>${e.ad}</b><br>${e.ilce}<br>${e.mesafe < 1 ? Math.round(e.mesafe*1000) + ' m' : e.mesafe.toFixed(2) + ' km'}`;
-            L.marker([e.lat, e.lon]).addTo(markersLayer).bindPopup(popupText);
-          });
-
-          listeyiBas(sirali);
+            if (json.status === "success" && json.data && json.data.length > 0) {
+              durumEl.innerText = `Sana en yakın ${json.data.length} nöbetçi eczane bulundu!`;
+              listeyiGoster(json.data, userLat, userLon);
+            } else {
+              durumEl.innerText = "Şu an civarda nöbetçi eczane verisi bulunamadı.";
+            }
+          } catch (err) {
+            durumEl.innerText = "Veri bağlantısı sırasında bir hata oluştu.";
+            console.error(err);
+          } finally {
+            btn.disabled = false;
+          }
         },
         (err) => {
-          durumEl.innerText = "Konum izni alınamadı. Lütfen tarayıcı ayarlarından izin verin.";
-        }
+          durumEl.innerText = "Konum izni verilmedi. Lütfen tarayıcı ayarlarından izin verin.";
+          btn.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
       );
     }
 
-    function listeyiBas(eczaneler) {
+    function listeyiGoster(eczaneler, userLat, userLon) {
       const listeDiv = document.getElementById("liste");
       listeDiv.innerHTML = "";
 
-      eczaneler.forEach((ecz, i) => {
-        const mesafeStr = ecz.mesafe < 1 ? `${Math.round(ecz.mesafe * 1000)} metre` : `${ecz.mesafe.toFixed(2)} km`;
-        const div = document.createElement("div");
-        div.className = "pharmacy-card";
-        div.innerHTML = `
-          ${i === 0 ? '<span class="badge">EN YAKIN</span>' : ''}
-          <div class="pharmacy-name">${ecz.ad}</div>
-          <div class="pharmacy-district">${ecz.ilce}</div>
-          <div class="pharmacy-dist">📍 ${mesafeStr}</div>
+      eczaneler.forEach((ecz, index) => {
+        const lat = parseFloat(ecz.latitude);
+        const lon = parseFloat(ecz.longitude);
+        const mesafeYazi = ecz.distance ? `${parseFloat(ecz.distance).toFixed(1)} km` : "Yakın";
+
+        // Harita İşaretçisi
+        if (!isNaN(lat) && !isNaN(lon)) {
+          L.marker([lat, lon]).addTo(markersLayer)
+            .bindPopup(`<b>${ecz.pharmacyName}</b><br>${ecz.district || ''} / ${ecz.city || ''}<br>Mesafe: ${mesafeYazi}`);
+        }
+
+        // Eczane Kartı
+        const kart = document.createElement("div");
+        kart.className = "pharmacy-card";
+        kart.innerHTML = `
+          ${index === 0 ? '<span class="badge">EN YAKIN</span>' : ''}
+          <div class="pharmacy-name">${ecz.pharmacyName}</div>
+          <div class="pharmacy-district">${ecz.district ? ecz.district + ' / ' : ''}${ecz.city || ''}</div>
+          <div class="pharmacy-address">📍 ${ecz.address || 'Adres bilgisi yok'}</div>
+          <div class="pharmacy-dist">⚡ ${mesafeYazi}</div>
           <div class="card-actions">
-            <a href="tel:${ecz.tel}" class="btn-call">📞 Ara</a>
-            <a href="https://www.google.com/maps/dir/?api=1&destination=${ecz.lat},${ecz.lon}" target="_blank" class="btn-nav">🗺️ Yol Tarifi</a>
+            <a href="tel:${ecz.phone}" class="btn-call">📞 ${ecz.phone || 'Ara'}</a>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn-nav">🗺️ Yol Tarifi</a>
           </div>
         `;
-        listeDiv.appendChild(div);
+        listeDiv.appendChild(kart);
       });
     }
   </script>
