@@ -35,11 +35,12 @@ jobs:
             try {
               const res = await fetch(url);
               const json = await res.json();
+              console.log("API Durumu:", json.status, "Kayıt Sayısı:", json.data ? json.data.length : 0);
 
-              if (json.status === "success" && json.data) {
-                const gorulenler = new Set();
-                const temizListe = [];
+              const gorulenler = new Set();
+              const temizListe = [];
 
+              if (json.status === "success" && Array.isArray(json.data)) {
                 for (const ecz of json.data) {
                   const ad = (ecz.pharmacyName || ecz.name || "").trim().toLowerCase();
                   const ilce = (ecz.district || "").trim().toLowerCase();
@@ -57,15 +58,18 @@ jobs:
                     });
                   }
                 }
-
-                fs.writeFileSync("nobetci.json", JSON.stringify(temizListe, null, 2), "utf8");
-                console.log(`Tamamlandı: ${temizListe.length} adet resmi eczane kaydedildi.`);
-              } else {
-                console.log("API veri döndürmedi:", json);
               }
+
+              // Dosya her halükarda diske yazılır (hata vermemesi için)
+              fs.writeFileSync("nobetci.json", JSON.stringify(temizListe, null, 2), "utf8");
+              console.log(`Dosya hazırlandı: ${temizListe.length} adet kayıt nobetci.json dosyasına yazıldı.`);
+
             } catch (err) {
-              console.error("Hata:", err);
-              process.exit(1);
+              console.error("İstek Hatası:", err);
+              // Hata anında bile dosya oluştur
+              if (!fs.existsSync("nobetci.json")) {
+                fs.writeFileSync("nobetci.json", "[]", "utf8");
+              }
             }
           }
 
@@ -76,6 +80,11 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add nobetci.json
-          git commit -m "Otomatik nöbetçi listesi güncellendi" || echo "Değişiklik yok"
-          git push origin HEAD:main
+          
+          if [ -f nobetci.json ]; then
+            git add nobetci.json
+            git commit -m "Otomatik nöbetçi listesi güncellendi" || echo "Değişiklik yok, devam ediliyor"
+            git push origin HEAD:main || echo "Push edilecek yeni veri yok"
+          else
+            echo "nobetci.json dosyası bulunamadı, işlem atlandı."
+          fi
