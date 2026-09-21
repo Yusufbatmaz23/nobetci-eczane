@@ -4,36 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Yakınımdaki Eczaneler</title>
-  <meta name="theme-color" content="#0b132b">
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #0b132b; color: #f8fafc; padding: 14px; max-width: 500px; margin: 0 auto; }
+    
+    /* GÜNDÜZ MODU (KIRMIZI TEMA) */
+    body.theme-gunduz {
+      background-color: #881337;
+      color: #ffffff;
+    }
+    body.theme-gunduz .mode-switch { background: #4c0519; }
+    body.theme-gunduz .mode-btn.active { background: #e11d48; color: #ffffff; }
+    body.theme-gunduz .pharmacy-card { background-color: #9f1239; border: 1px solid #be123c; }
+    body.theme-gunduz .btn-find { background-color: #f43f5e; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4); }
+
+    /* NÖBETÇİ MODU (SİMSİYAH GECE TEMASI) */
+    body.theme-nobet {
+      background-color: #000000;
+      color: #f8fafc;
+    }
+    body.theme-nobet .mode-switch { background: #121212; }
+    body.theme-nobet .mode-btn.active { background: #27272a; color: #38bdf8; border: 1px solid #3f3f46; }
+    body.theme-nobet .pharmacy-card { background-color: #0a0a0a; border: 1px solid #262626; }
+    body.theme-nobet .btn-find { background-color: #2563eb; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); }
+
+    body { padding: 14px; max-width: 500px; margin: 0 auto; transition: background-color 0.25s ease; }
     header { text-align: center; margin-bottom: 12px; }
-    header h1 { font-size: 20px; color: #ef4444; font-weight: 800; }
-    header p { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    header h1 { font-size: 20px; font-weight: 800; }
+    header p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
 
-    .mode-switch { display: flex; gap: 8px; margin-bottom: 12px; background: #1c2541; padding: 4px; border-radius: 10px; }
-    .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; background: transparent; color: #94a3b8; transition: 0.2s; }
-    .mode-btn.active { background: #ef4444; color: #ffffff; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4); }
+    .mode-switch { display: flex; gap: 8px; margin-bottom: 12px; padding: 4px; border-radius: 10px; }
+    .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; background: transparent; color: #d1d5db; transition: 0.2s; }
 
-    #map { height: 260px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #3a506b; z-index: 1; }
+    #map { height: 260px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.2); z-index: 1; }
     
     .btn-find { 
-      background-color: #ef4444; color: white; border: none; padding: 14px; 
+      color: white; border: none; padding: 14px; 
       border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; 
-      font-size: 15px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); 
+      font-size: 15px; transition: 0.3s;
     }
-    .btn-find:disabled { background-color: #64748b; cursor: not-allowed; }
+    .btn-find:disabled { background-color: #52525b !important; cursor: not-allowed; }
     
-    #durum { text-align: center; margin: 10px 0; font-size: 13px; color: #cbd5e1; }
+    #durum { text-align: center; margin: 10px 0; font-size: 13px; opacity: 0.9; }
     
     .pharmacy-card { 
-      background-color: #1c2541; border-radius: 12px; padding: 14px; 
-      margin-bottom: 10px; border: 1px solid #3a506b; position: relative; 
+      border-radius: 12px; padding: 14px; margin-bottom: 10px; position: relative; 
+      transition: background-color 0.25s ease;
     }
     .badge { 
       position: absolute; top: 12px; right: 12px; 
@@ -42,7 +61,7 @@
     }
     .badge-nobet { background-color: #f59e0b; }
     .pharmacy-name { font-size: 17px; font-weight: bold; margin-bottom: 4px; color: #ffffff; }
-    .pharmacy-address { font-size: 12px; color: #cbd5e1; margin-bottom: 6px; line-height: 1.4; }
+    .pharmacy-address { font-size: 12px; opacity: 0.9; margin-bottom: 6px; line-height: 1.4; }
     .pharmacy-dist { font-size: 17px; font-weight: 800; color: #38bdf8; margin-bottom: 10px; }
     
     .card-actions { display: flex; gap: 8px; }
@@ -50,19 +69,19 @@
       flex: 1; text-align: center; padding: 10px; border-radius: 8px; 
       text-decoration: none; font-size: 13px; font-weight: bold; 
     }
-    .btn-call { background-color: #334155; color: white; }
+    .btn-call { background-color: #3f3f46; color: white; }
     .btn-nav { background-color: #2563eb; color: white; }
   </style>
 </head>
-<body>
+<body class="theme-gunduz">
 
   <header>
-    <h1 id="baslik">🚨 Yakınımdaki Eczaneler</h1>
-    <p>İlçe sınırı yok. Gerçek coğrafi mesafeye göre en yakınlar.</p>
+    <h1 id="baslik">☀️ Yakınımdaki Açık Eczaneler</h1>
+    <p>İlçe sınırı yok. Güncel resmi kayıtlara göre en yakınlar.</p>
   </header>
 
   <div class="mode-switch">
-    <button id="btnGunduz" class="mode-btn" onclick="modDegistir('gunduz')">☀️ Açık Eczaneler (Gündüz)</button>
+    <button id="btnGunduz" class="mode-btn active" onclick="modDegistir('gunduz')">☀️ Açık Eczaneler (Gündüz)</button>
     <button id="btnNobet" class="mode-btn" onclick="modDegistir('nobet')">🌙 Nöbetçi Eczaneler</button>
   </div>
 
@@ -90,7 +109,7 @@
       const dakika = simdi.getMinutes();
       const ondalikSaat = saat + (dakika / 60);
 
-      // Pazar günleri tam gün veya 18:30 - 08:30 arası -> Nöbetçi Modu
+      // Pazar günleri veya 18:30 - 08:30 arası nöbetçi modu
       if (gun === 0 || ondalikSaat >= 18.5 || ondalikSaat < 8.5) {
         modDegistir('nobet');
       } else {
@@ -105,10 +124,12 @@
       const baslik = document.getElementById("baslik");
 
       if (aktifMod === 'gunduz') {
+        document.body.className = "theme-gunduz";
         btnG.classList.add("active");
         btnN.classList.remove("active");
         baslik.innerText = "☀️ Yakınımdaki Açık Eczaneler";
       } else {
+        document.body.className = "theme-nobet";
         btnN.classList.add("active");
         btnG.classList.remove("active");
         baslik.innerText = "🌙 Yakınımdaki Nöbetçi Eczaneler";
@@ -162,6 +183,37 @@
       );
     }
 
+    // AYNI İSİMDEKİ KAYITLARDAN "GERÇEKTEN YENİ VE DOĞRU" OLANI SEÇEN ALGORİTMA
+    function enGuncelOlanıSec(kayitlar) {
+      if (kayitlar.length === 1) return kayitlar[0];
+
+      return kayitlar.sort((a, b) => {
+        // 1. Kriter: Veri Doluluğu Skoru (Cadde, kapı no, telefon var mı?)
+        const puanA = (a.tags["addr:street"] ? 4 : 0) + 
+                      (a.tags["addr:housenumber"] ? 2 : 0) + 
+                      (a.tags.phone || a.tags["contact:phone"] ? 2 : 0);
+                      
+        const puanB = (b.tags["addr:street"] ? 4 : 0) + 
+                      (b.tags["addr:housenumber"] ? 2 : 0) + 
+                      (b.tags.phone || b.tags["contact:phone"] ? 2 : 0);
+
+        if (puanA !== puanB) {
+          return puanB - puanA; // Adres detayı zengin olan kazanır
+        }
+
+        // 2. Kriter: OpenStreetMap Güncellenme Tarihi (Timestamp)
+        const tarihA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const tarihB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+
+        if (tarihA !== tarihB) {
+          return tarihB - tarihA; // Haritada daha yeni güncellenen/eklenen kazanır
+        }
+
+        // 3. Kriter: Düzenleme versiyonu
+        return (b.version || 0) - (a.version || 0);
+      })[0];
+    }
+
     async function eczaneleriAra(userLat, userLon) {
       const durumEl = document.getElementById("durum");
       durumEl.innerText = "Eczaneler taranıyor...";
@@ -173,25 +225,43 @@
         .bindPopup("<b>Buradasınız</b>").addTo(markersLayer);
 
       if (aktifMod === 'gunduz') {
-        // GÜNDÜZ: OpenStreetMap Overpass (Sınırsız & Ücretsiz)
+        // GÜNDÜZ: "out meta;" ile tarih ve sürüm bilgisiyle beraber çekilir
         try {
-          const query = `[out:json];node["amenity"="pharmacy"](around:3500,${userLat},${userLon});out;`;
+          const query = `[out:json];node["amenity"="pharmacy"](around:3500,${userLat},${userLon});out meta;`;
           const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
           const data = await res.json();
 
           if (data.elements && data.elements.length > 0) {
-            const liste = data.elements.map(e => ({
-              ad: e.tags.name || "Eczane",
-              adres: e.tags["addr:street"] ? `${e.tags["addr:street"]} No:${e.tags["addr:housenumber"] || ''}` : "Bölge Eczanesi",
-              tel: e.tags.phone || e.tags["contact:phone"] || "",
-              lat: e.lat,
-              lon: e.lon,
-              mesafe: mesafeKm(userLat, userLon, e.lat, e.lon),
-              nobetciMi: false
-            })).sort((a, b) => a.mesafe - b.mesafe);
+            // Önce aynı isimdeki kayıtları bir araya toplayıp grupluyoruz
+            const gruplar = {};
 
-            durumEl.innerText = `Sana en yakın ${liste.length} açık eczane listelendi.`;
-            listeyiCiz(liste);
+            data.elements.forEach(el => {
+              const hamAd = el.tags.name || "Eczane";
+              const safAd = hamAd.toLowerCase().replace(/[^a-z0-9ğüşıöç]/gi, '');
+              if (!gruplar[safAd]) gruplar[safAd] = [];
+              gruplar[safAd].push(el);
+            });
+
+            // Her grup için mesafeye bakmaksızın en güncel/detaylı olanı seçiyoruz
+            const filtrelenmis = [];
+            Object.values(gruplar).forEach(grup => {
+              const secilen = enGuncelOlanıSec(grup);
+              filtrelenmis.push({
+                ad: secilen.tags.name || "Eczane",
+                adres: secilen.tags["addr:street"] ? `${secilen.tags["addr:street"]} No:${secilen.tags["addr:housenumber"] || ''}` : "Bölge Eczanesi",
+                tel: secilen.tags.phone || secilen.tags["contact:phone"] || "",
+                lat: secilen.lat,
+                lon: secilen.lon,
+                mesafe: mesafeKm(userLat, userLon, secilen.lat, secilen.lon),
+                nobetciMi: false
+              });
+            });
+
+            // Seçilen gerçek eczaneleri kullanıcıya olan mesafesine göre diziyoruz
+            filtrelenmis.sort((a, b) => a.mesafe - b.mesafe);
+
+            durumEl.innerText = `Sana en yakın ${filtrelenmis.length} açık eczane listelendi.`;
+            listeyiCiz(filtrelenmis);
           } else {
             durumEl.innerText = "3.5 km çevrede açık eczane bulunamadı.";
           }
@@ -199,9 +269,8 @@
           durumEl.innerText = "Açık eczane verisi çekilirken hata oluştu.";
         }
       } else {
-        // NÖBETÇİ: GitHub depomuzdaki yerel nobetci.json dosyası
+        // NÖBETÇİ: Depodaki resmi nobetci.json
         try {
-          // Tarayıcı önbelleğini kırmak için rastgele parametre eklenir
           const res = await fetch(`nobetci.json?v=${Date.now()}`);
           if (!res.ok) throw new Error("Dosya okunamadı");
           const data = await res.json();
@@ -215,15 +284,15 @@
               lon: e.lon,
               mesafe: mesafeKm(userLat, userLon, e.lat, e.lon),
               nobetciMi: true
-            })).sort((a, b) => a.mesafe - b.mesafe).slice(0, 25); // En yakın 25 nöbetçi
+            })).sort((a, b) => a.mesafe - b.mesafe);
 
-            durumEl.innerText = `Sana en yakın ${liste.length} nöbetçi eczane listelendi!`;
-            listeyiCiz(liste);
+            durumEl.innerText = `Sana en yakın ${liste.slice(0, 25).length} nöbetçi eczane listelendi!`;
+            listeyiCiz(liste.slice(0, 25));
           } else {
-            durumEl.innerText = "Kayıtlı nöbetçi listesi boş veya güncelleniyor (gündüz saatlerinde nöbetçi listesi kapalı olabilir).";
+            durumEl.innerText = "Kayıtlı nöbetçi listesi güncelleniyor.";
           }
         } catch (err) {
-          durumEl.innerText = "Nöbetçi listesi (nobetci.json) okunurken hata oluştu.";
+          durumEl.innerText = "Nöbetçi listesi okunurken hata oluştu.";
         }
       }
     }
