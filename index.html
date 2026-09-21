@@ -16,7 +16,6 @@
     header h1 { font-size: 20px; color: #ef4444; font-weight: 800; }
     header p { font-size: 12px; color: #94a3b8; margin-top: 2px; }
 
-    /* Mod Seçim Sekmeleri */
     .mode-switch { display: flex; gap: 8px; margin-bottom: 12px; background: #1c2541; padding: 4px; border-radius: 10px; }
     .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; background: transparent; color: #94a3b8; transition: 0.2s; }
     .mode-btn.active { background: #ef4444; color: #ffffff; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4); }
@@ -62,7 +61,6 @@
     <p>İlçe sınırı yok. Gerçek coğrafi mesafeye göre en yakınlar.</p>
   </header>
 
-  <!-- Mod Değiştirme Butonları -->
   <div class="mode-switch">
     <button id="btnGunduz" class="mode-btn" onclick="modDegistir('gunduz')">☀️ Açık Eczaneler (Gündüz)</button>
     <button id="btnNobet" class="mode-btn" onclick="modDegistir('nobet')">🌙 Nöbetçi Eczaneler</button>
@@ -75,8 +73,6 @@
   <div id="liste"></div>
 
   <script>
-    const NOSY_API_KEY = "TgAkfbuuIcFzFcvHVQJ5nOvvVQK31wNaXrFnJKgfWvp1Voo5tA2qNk2wep9b";
-
     let aktifMod = "gunduz";
     let map = null;
     let markersLayer = null;
@@ -87,7 +83,6 @@
       haritayiBaslat();
     };
 
-    // Saate göre varsayılan modu belirle
     function otomatikModSec() {
       const simdi = new Date();
       const gun = simdi.getDay(); // 0 = Pazar
@@ -95,7 +90,7 @@
       const dakika = simdi.getMinutes();
       const ondalikSaat = saat + (dakika / 60);
 
-      // Pazar günleri veya 18:30 - 08:30 arası -> Nöbetçi Modu
+      // Pazar günleri tam gün veya 18:30 - 08:30 arası -> Nöbetçi Modu
       if (gun === 0 || ondalikSaat >= 18.5 || ondalikSaat < 8.5) {
         modDegistir('nobet');
       } else {
@@ -161,7 +156,7 @@
         },
         (err) => {
           btn.disabled = false;
-          durumEl.innerText = "Konum izni alınamadı. Tarayıcı izinlerini kontrol edin.";
+          durumEl.innerText = "Konum izni alınamadı. Tarayıcı izinlerinizi kontrol edin.";
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
@@ -169,69 +164,66 @@
 
     async function eczaneleriAra(userLat, userLon) {
       const durumEl = document.getElementById("durum");
-      durumEl.innerText = "Çevredeki eczaneler taranıyor...";
+      durumEl.innerText = "Eczaneler taranıyor...";
 
       haritayiBaslat(userLat, userLon);
       markersLayer.clearLayers();
 
-      // Kullanıcı konumu
       L.circleMarker([userLat, userLon], { radius: 9, color: '#38bdf8', fillColor: '#0284c7', fillOpacity: 1 })
         .bindPopup("<b>Buradasınız</b>").addTo(markersLayer);
 
       if (aktifMod === 'gunduz') {
-        // GÜNDÜZ MODU: OpenStreetMap Overpass (Sıfır maliyet, tüm fiziksel açık eczaneler)
+        // GÜNDÜZ: OpenStreetMap Overpass (Sınırsız & Ücretsiz)
         try {
           const query = `[out:json];node["amenity"="pharmacy"](around:3500,${userLat},${userLon});out;`;
           const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
           const data = await res.json();
 
           if (data.elements && data.elements.length > 0) {
-            const liste = data.elements.map(e => {
-              const d = mesafeKm(userLat, userLon, e.lat, e.lon);
-              return {
-                ad: e.tags.name || "Eczane",
-                adres: e.tags["addr:street"] ? `${e.tags["addr:street"]} No:${e.tags["addr:housenumber"] || ''}` : "Bölge Eczanesi",
-                tel: e.tags.phone || e.tags["contact:phone"] || "",
-                lat: e.lat,
-                lon: e.lon,
-                mesafe: d,
-                nobetciMi: false
-              };
-            }).sort((a, b) => a.mesafe - b.mesafe);
+            const liste = data.elements.map(e => ({
+              ad: e.tags.name || "Eczane",
+              adres: e.tags["addr:street"] ? `${e.tags["addr:street"]} No:${e.tags["addr:housenumber"] || ''}` : "Bölge Eczanesi",
+              tel: e.tags.phone || e.tags["contact:phone"] || "",
+              lat: e.lat,
+              lon: e.lon,
+              mesafe: mesafeKm(userLat, userLon, e.lat, e.lon),
+              nobetciMi: false
+            })).sort((a, b) => a.mesafe - b.mesafe);
 
-            durumEl.innerText = `Sana en yakın ${liste.length} açık eczane listelendi!`;
+            durumEl.innerText = `Sana en yakın ${liste.length} açık eczane listelendi.`;
             listeyiCiz(liste);
           } else {
-            durumEl.innerText = "3.5 km çevrede kayıtlı açık eczane bulunamadı.";
+            durumEl.innerText = "3.5 km çevrede açık eczane bulunamadı.";
           }
         } catch (err) {
           durumEl.innerText = "Açık eczane verisi çekilirken hata oluştu.";
         }
       } else {
-        // NÖBETÇİ MODU: NosyAPI Locations
+        // NÖBETÇİ: GitHub depomuzdaki yerel nobetci.json dosyası
         try {
-          const url = `https://www.nosyapi.com/apiv2/service/pharmacies-on-duty/locations?latitude=${userLat}&longitude=${userLon}&apiKey=${NOSY_API_KEY}`;
-          const res = await fetch(url);
-          const json = await res.json();
+          // Tarayıcı önbelleğini kırmak için rastgele parametre eklenir
+          const res = await fetch(`nobetci.json?v=${Date.now()}`);
+          if (!res.ok) throw new Error("Dosya okunamadı");
+          const data = await res.json();
 
-          if (json.status === "success" && json.data && json.data.length > 0) {
-            const liste = json.data.map(e => ({
-              ad: e.pharmacyName || e.name || "Nöbetçi Eczane",
-              adres: e.address || `${e.district || ''} / ${e.city || ''}`,
-              tel: e.phone || "",
-              lat: parseFloat(e.latitude),
-              lon: parseFloat(e.longitude),
-              mesafe: e.distance ? parseFloat(e.distance) : mesafeKm(userLat, userLon, parseFloat(e.latitude), parseFloat(e.longitude)),
+          if (Array.isArray(data) && data.length > 0) {
+            const liste = data.map(e => ({
+              ad: e.ad,
+              adres: `${e.adres} (${e.ilce})`,
+              tel: e.tel || "",
+              lat: e.lat,
+              lon: e.lon,
+              mesafe: mesafeKm(userLat, userLon, e.lat, e.lon),
               nobetciMi: true
-            })).sort((a, b) => a.mesafe - b.mesafe);
+            })).sort((a, b) => a.mesafe - b.mesafe).slice(0, 25); // En yakın 25 nöbetçi
 
             durumEl.innerText = `Sana en yakın ${liste.length} nöbetçi eczane listelendi!`;
             listeyiCiz(liste);
           } else {
-            durumEl.innerText = "Şu anda nöbetçi eczane kaydı dönmedi (liste güncelleniyor olabilir).";
+            durumEl.innerText = "Kayıtlı nöbetçi listesi boş veya güncelleniyor (gündüz saatlerinde nöbetçi listesi kapalı olabilir).";
           }
         } catch (err) {
-          durumEl.innerText = "Nöbetçi verisine bağlanırken hata oluştu.";
+          durumEl.innerText = "Nöbetçi listesi (nobetci.json) okunurken hata oluştu.";
         }
       }
     }
