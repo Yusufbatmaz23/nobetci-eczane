@@ -77,5 +77,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add nobetci.json
-          git commit -m "Otomatik nöbetçi listesi güncellendi" || exit 0
-          git push origin main
+          git commit -m "Otomatik nöbetçi listesi güncellendi" || echo "Değişiklik yok"
+          git push origin HEAD:main
