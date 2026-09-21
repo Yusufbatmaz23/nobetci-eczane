@@ -14,26 +14,39 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #0b132b; color: #f8fafc; padding: 14px; max-width: 500px; margin: 0 auto; }
     header { text-align: center; margin-bottom: 14px; }
-    header h1 { font-size: 20px; color: #ef4444; }
+    header h1 { font-size: 20px; color: #ef4444; font-weight: 800; }
     header p { font-size: 12px; color: #94a3b8; margin-top: 3px; }
     
     #map { height: 260px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #3a506b; z-index: 1; }
     
-    .btn-find { background-color: #ef4444; color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); }
-    .btn-find:hover { background-color: #dc2626; }
+    .btn-find { 
+      background-color: #ef4444; color: white; border: none; padding: 14px; 
+      border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; 
+      font-size: 16px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); 
+    }
     .btn-find:disabled { background-color: #64748b; cursor: not-allowed; }
     
     #durum { text-align: center; margin: 12px 0; font-size: 13px; color: #cbd5e1; }
     
-    .pharmacy-card { background-color: #1c2541; border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid #3a506b; position: relative; }
-    .badge { position: absolute; top: 12px; right: 12px; background-color: #10b981; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    .pharmacy-card { 
+      background-color: #1c2541; border-radius: 12px; padding: 14px; 
+      margin-bottom: 12px; border: 1px solid #3a506b; position: relative; 
+    }
+    .badge { 
+      position: absolute; top: 12px; right: 12px; 
+      background-color: #10b981; color: white; padding: 3px 8px; 
+      border-radius: 6px; font-size: 11px; font-weight: bold; 
+    }
     .pharmacy-name { font-size: 17px; font-weight: bold; margin-bottom: 3px; }
-    .pharmacy-district { font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+    .pharmacy-district { font-size: 12px; color: #38bdf8; margin-bottom: 4px; }
     .pharmacy-address { font-size: 12px; color: #cbd5e1; margin-bottom: 8px; line-height: 1.4; }
     .pharmacy-dist { font-size: 18px; font-weight: 800; color: #38bdf8; margin-bottom: 10px; }
     
     .card-actions { display: flex; gap: 8px; }
-    .card-actions a { flex: 1; text-align: center; padding: 10px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: bold; }
+    .card-actions a { 
+      flex: 1; text-align: center; padding: 10px; border-radius: 8px; 
+      text-decoration: none; font-size: 13px; font-weight: bold; 
+    }
     .btn-call { background-color: #334155; color: white; }
     .btn-nav { background-color: #2563eb; color: white; }
   </style>
@@ -42,18 +55,18 @@
 
   <header>
     <h1>🚨 Yakınımdaki Nöbetçi Eczane</h1>
-    <p>İlçe sınırı yok. Gerçekten en yakın açık eczaneler.</p>
+    <p>İlçe sınırı yok. Gerçekten en yakın açık nöbetçi eczaneler.</p>
   </header>
 
   <button id="findBtn" class="btn-find" onclick="canliEczaneleriGetir()">📍 En Yakın Nöbetçi Eczaneleri Bul</button>
-  <p id="durum">Konum butonuna basarak arama yapın</p>
+  <p id="durum">Butona basarak arama yapın</p>
 
   <div id="map"></div>
   <div id="liste"></div>
 
   <script>
-    // Senin ekrandaki NosyAPI anahtarın
-    const API_KEY = "8FbmiAoytZC2IaVRWgYCHPe71xwBe3wgA6eNYFeEDMBUeBNnwxZE4zQ0Geu";
+    // Yeni hesabına ait API Anahtarı
+    const API_KEY = "TgAkfbuuIcFzFcvHVQJ5nOvvVQK31wNaXrFnJKgfWvp1Voo5tA2qNk2wep9b";
 
     let map = null;
     let markersLayer = null;
@@ -90,12 +103,12 @@
           haritayiBaslat(userLat, userLon);
           markersLayer.clearLayers();
 
-          // Kullanıcı konumu (Mavi Halka)
+          // Bulunduğun nokta (Mavi Halka)
           L.circleMarker([userLat, userLon], { radius: 8, color: '#38bdf8', fillColor: '#0284c7', fillOpacity: 1 })
             .bindPopup("<b>Buradasınız</b>").addTo(markersLayer);
 
           try {
-            // Canlı NosyAPI Locations Servisi
+            // NosyAPI Locations Servisi (En yakın 20 nöbetçi eczane)
             const url = `https://www.nosyapi.com/apiv2/service/pharmacies-on-duty/locations?latitude=${userLat}&longitude=${userLon}&apiKey=${API_KEY}`;
             const res = await fetch(url);
             const json = await res.json();
@@ -104,10 +117,10 @@
               durumEl.innerText = `Sana en yakın ${json.data.length} nöbetçi eczane bulundu!`;
               listeyiGoster(json.data, userLat, userLon);
             } else {
-              durumEl.innerText = "Şu an civarda nöbetçi eczane verisi bulunamadı.";
+              durumEl.innerText = "Civarda nöbetçi eczane verisi bulunamadı veya liste güncelleniyor.";
             }
           } catch (err) {
-            durumEl.innerText = "Veri bağlantısı sırasında bir hata oluştu.";
+            durumEl.innerText = "Bağlantı hatası oluştu. Lütfen tekrar deneyin.";
             console.error(err);
           } finally {
             btn.disabled = false;
@@ -126,24 +139,28 @@
       listeDiv.innerHTML = "";
 
       eczaneler.forEach((ecz, index) => {
+        const ad = ecz.pharmacyName || ecz.name || "Eczane";
         const lat = parseFloat(ecz.latitude);
         const lon = parseFloat(ecz.longitude);
-        const mesafeYazi = ecz.distance ? `${parseFloat(ecz.distance).toFixed(1)} km` : "Yakın";
+        const ilce = ecz.district ? `${ecz.district} / ` : "";
+        const sehir = ecz.city || "";
+        const mesafeVal = ecz.distance ? parseFloat(ecz.distance) : null;
+        const mesafeYazi = mesafeVal ? (mesafeVal < 1 ? `${Math.round(mesafeVal * 1000)} m` : `${mesafeVal.toFixed(1)} km`) : "Yakın";
 
-        // Harita İşaretçisi
+        // Haritaya İşaretçi Ekle
         if (!isNaN(lat) && !isNaN(lon)) {
           L.marker([lat, lon]).addTo(markersLayer)
-            .bindPopup(`<b>${ecz.pharmacyName}</b><br>${ecz.district || ''} / ${ecz.city || ''}<br>Mesafe: ${mesafeYazi}`);
+            .bindPopup(`<b>${ad}</b><br>${ilce}${sehir}<br>Mesafe: ${mesafeYazi}`);
         }
 
-        // Eczane Kartı
+        // Liste Kartı
         const kart = document.createElement("div");
         kart.className = "pharmacy-card";
         kart.innerHTML = `
           ${index === 0 ? '<span class="badge">EN YAKIN</span>' : ''}
-          <div class="pharmacy-name">${ecz.pharmacyName}</div>
-          <div class="pharmacy-district">${ecz.district ? ecz.district + ' / ' : ''}${ecz.city || ''}</div>
-          <div class="pharmacy-address">📍 ${ecz.address || 'Adres bilgisi yok'}</div>
+          <div class="pharmacy-name">${ad}</div>
+          <div class="pharmacy-district">${ilce}${sehir}</div>
+          <div class="pharmacy-address">📍 ${ecz.address || 'Adres bilgisi bulunamadı'}</div>
           <div class="pharmacy-dist">⚡ ${mesafeYazi}</div>
           <div class="card-actions">
             <a href="tel:${ecz.phone}" class="btn-call">📞 ${ecz.phone || 'Ara'}</a>
