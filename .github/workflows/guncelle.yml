@@ -2,9 +2,8 @@ name: Günlük Nöbetçi Eczane Güncelleyici
 
 on:
   schedule:
-    # Türkiye saatiyle 09:05 (06:05 UTC) ve 19:05 (16:05 UTC)
+    # Türkiye saatiyle 09:05 ve 19:05
     - cron: '5 6,16 * * *'
-  # Manuel test için panelden tek tıkla çalıştırma imkanı
   workflow_dispatch:
 
 permissions:
@@ -16,6 +15,8 @@ jobs:
     steps:
       - name: Depoyu Klonla
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Node.js Kur
         uses: actions/setup-node@v4
@@ -73,7 +74,8 @@ jobs:
 
       - name: Değişiklikleri Depoya Kaydet
         run: |
-          git config --global user.name "Eczane Botu"
-          git config --global user.email "bot@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add nobetci.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Otomatik nöbetçi listesi güncellendi" && git push)
+          git commit -m "Otomatik nöbetçi listesi güncellendi" || exit 0
+          git push origin main
