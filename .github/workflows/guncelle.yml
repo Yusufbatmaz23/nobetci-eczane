@@ -1,0 +1,79 @@
+name: Günlük Nöbetçi Eczane Güncelleyici
+
+on:
+  schedule:
+    # Türkiye saatiyle 09:05 (06:05 UTC) ve 19:05 (16:05 UTC)
+    - cron: '5 6,16 * * *'
+  # Manuel test için panelden tek tıkla çalıştırma imkanı
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  guncelle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu Klonla
+        uses: actions/checkout@v4
+
+      - name: Node.js Kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Eczaneleri Çek ve Temizle
+        run: |
+          node -e '
+          const fs = require("fs");
+
+          async function calistir() {
+            const API_KEY = "TgAkfbuuIcFzFcvHVQJ5nOvvVQK31wNaXrFnJKgfWvp1Voo5tA2qNk2wep9b";
+            const url = `https://www.nosyapi.com/apiv2/service/pharmacies-on-duty?city=istanbul&apiKey=${API_KEY}`;
+            
+            try {
+              const res = await fetch(url);
+              const json = await res.json();
+
+              if (json.status === "success" && json.data) {
+                const gorulenler = new Set();
+                const temizListe = [];
+
+                for (const ecz of json.data) {
+                  const ad = (ecz.pharmacyName || ecz.name || "").trim().toLowerCase();
+                  const ilce = (ecz.district || "").trim().toLowerCase();
+                  const anahtar = `${ad}-${ilce}`;
+
+                  if (!gorulenler.has(anahtar) && ecz.latitude && ecz.longitude) {
+                    gorulenler.add(anahtar);
+                    temizListe.push({
+                      ad: ecz.pharmacyName || ecz.name,
+                      ilce: ecz.district,
+                      adres: ecz.address,
+                      tel: ecz.phone,
+                      lat: parseFloat(ecz.latitude),
+                      lon: parseFloat(ecz.longitude)
+                    });
+                  }
+                }
+
+                fs.writeFileSync("nobetci.json", JSON.stringify(temizListe, null, 2), "utf8");
+                console.log(`Tamamlandı: ${temizListe.length} adet resmi eczane kaydedildi.`);
+              } else {
+                console.log("API veri döndürmedi:", json);
+              }
+            } catch (err) {
+              console.error("Hata:", err);
+              process.exit(1);
+            }
+          }
+
+          calistir();
+          '
+
+      - name: Değişiklikleri Depoya Kaydet
+        run: |
+          git config --global user.name "Eczane Botu"
+          git config --global user.email "bot@github.com"
+          git add nobetci.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Otomatik nöbetçi listesi güncellendi" && git push)
